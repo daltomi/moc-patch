@@ -1,0 +1,32 @@
+From 97024c32e40da1d693013e5f6b8165e55c5c824b Mon Sep 17 00:00:00 2001
+From: "Daniel T. Borelli" <daltomi@aol.com>
+Date: Tue, 28 Jun 2016 10:32:26 -0300
+Subject: [PATCH 4/4] Fix memory leak.
+
+* It's safe to release a NULL pointer.
+---
+ trunk/server.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/trunk/server.c b/trunk/server.c
+index bb44aef..9c0d70c 100644
+--- a/trunk/server.c
++++ b/trunk/server.c
+@@ -1136,11 +1136,13 @@ static int plist_sync_cmd (struct client *cli, const int cmd)
+ 		free (file);
+ 	}
+ 	else if (cmd == CMD_CLI_PLIST_MOVE) {
+-		struct move_ev_data m;
++		struct move_ev_data m = {.from=NULL,.to=NULL};
+ 
+ 		if (!(m.from = get_str(cli->socket))
+ 				|| !(m.to = get_str(cli->socket))) {
+ 			logit ("Error while receiving file");
++			free (m.from);
++			free (m.to);
+ 			return 0;
+ 		}
+ 
+-- 
+2.9.0
+
