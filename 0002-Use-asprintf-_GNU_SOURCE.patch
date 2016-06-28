@@ -1,0 +1,263 @@
+From 7b2e2ab3c90963398b1bbccb3d65ee967eecb6f5 Mon Sep 17 00:00:00 2001
+From: "Daniel T. Borelli" <daltomi@aol.com>
+Date: Mon, 27 Jun 2016 23:26:41 -0300
+Subject: [PATCH 2/2] Use asprintf (_GNU_SOURCE)
+
+* Replace xmalloc + sprintf/snprintf.
+
+* create_file_name (): in some cases the use of xstrdup allowed.
+---
+ trunk/common.c    | 13 ++++++++-----
+ trunk/common.h    |  2 +-
+ trunk/equalizer.c | 10 +++-------
+ trunk/interface.c |  4 ++--
+ trunk/main.c      | 30 ++++++++----------------------
+ trunk/protocol.c  |  2 +-
+ trunk/server.c    |  4 ++--
+ trunk/softmixer.c |  4 ++--
+ 8 files changed, 27 insertions(+), 42 deletions(-)
+
+diff --git a/trunk/common.c b/trunk/common.c
+index ea36a94..32b7eaa 100644
+--- a/trunk/common.c
++++ b/trunk/common.c
+@@ -321,20 +321,23 @@ bool is_valid_symbol (const char *candidate)
+ }
+ 
+ /* Return path to a file in MOC config directory. NOT THREAD SAFE */
+-char *create_file_name (const char *file)
++char * const create_file_name (const char *file)
+ {
+ 	int rc;
+-	static char fname[PATH_MAX];
++	static char * fname = NULL;
+ 	char *moc_dir = options_get_str ("MOCDir");
+ 
++    if (fname != NULL)
++        free (fname);
++
+ 	if (moc_dir[0] == '~')
+-		rc = snprintf(fname, sizeof(fname), "%s/%s/%s", get_home (),
++		rc = asprintf(& fname, "%s/%s/%s", get_home (),
+ 		              (moc_dir[1] == '/') ? moc_dir + 2 : moc_dir + 1,
+ 		              file);
+ 	else
+-		rc = snprintf(fname, sizeof(fname), "%s/%s", moc_dir, file);
++		rc = asprintf( & fname, "%s/%s", moc_dir, file);
+ 
+-	if (rc >= ssizeof(fname))
++	if (rc == -1)
+ 		fatal ("Path too long!");
+ 
+ 	return fname;
+diff --git a/trunk/common.h b/trunk/common.h
+index 11f420c..52716a3 100644
+--- a/trunk/common.h
++++ b/trunk/common.h
+@@ -133,7 +133,7 @@ char *trim (const char *src, size_t len);
+ char *format_msg (const char *format, ...);
+ char *format_msg_va (const char *format, va_list va);
+ bool is_valid_symbol (const char *candidate);
+-char *create_file_name (const char *file);
++char * const create_file_name (const char *file);
+ void sec_to_min (char *buff, const int seconds);
+ const char *get_home ();
+ void common_cleanup ();
+diff --git a/trunk/equalizer.c b/trunk/equalizer.c
+index a5c8149..3614a3e 100644
+--- a/trunk/equalizer.c
++++ b/trunk/equalizer.c
+@@ -354,12 +354,10 @@ static void equalizer_read_config()
+   char *curloc = xstrdup(setlocale(LC_NUMERIC, NULL));
+   setlocale(LC_NUMERIC, "C"); // posix decimal point
+ 
+-  char *sfile = xstrdup(create_file_name("equalizer"));
++  char * const sfile = create_file_name("equalizer");
+ 
+   FILE *cf = fopen(sfile, "r");
+ 
+-  free (sfile);
+-
+   if(cf==NULL)
+   {
+     logit ("Unable to read equalizer configuration");
+@@ -451,7 +449,7 @@ static void equalizer_write_config()
+   char *curloc = xstrdup(setlocale(LC_NUMERIC, NULL));
+   setlocale(LC_NUMERIC, "C"); /* posix decimal point */
+ 
+-  char *cfname = create_file_name(EQUALIZER_SAVE_FILE);
++  char * const cfname = create_file_name(EQUALIZER_SAVE_FILE);
+ 
+   FILE *cf = fopen(cfname, "w");
+ 
+@@ -558,7 +556,7 @@ void equalizer_refresh()
+   {
+     sprintf(buf, "eqsets/%s", de->d_name);
+ 
+-    char *filename = xstrdup(create_file_name(buf));
++    char * const filename = create_file_name(buf);
+ 
+     stat(filename, &st);
+ 
+@@ -645,8 +643,6 @@ void equalizer_refresh()
+       }
+     }
+ 
+-    free(filename);
+-
+     de = readdir(d);
+   }
+ 
+diff --git a/trunk/interface.c b/trunk/interface.c
+index bffe0d8..2737fd5 100644
+--- a/trunk/interface.c
++++ b/trunk/interface.c
+@@ -1612,7 +1612,7 @@ static void process_args (lists_t_strs *args)
+ /* Load the playlist from .moc directory. */
+ static void load_playlist ()
+ {
+-	char *plist_file = create_file_name (PLAYLIST_FILE);
++	char * const plist_file = create_file_name (PLAYLIST_FILE);
+ 
+ 	if (file_type(plist_file) == F_PLAYLIST) {
+ 		go_to_playlist (plist_file, 1, true);
+@@ -3665,7 +3665,7 @@ static void save_curr_dir ()
+  * playlist is empty. */
+ static void save_playlist_in_moc ()
+ {
+-	char *plist_file = create_file_name (PLAYLIST_FILE);
++	char * const plist_file = create_file_name (PLAYLIST_FILE);
+ 
+ 	if (plist_count(playlist) && options_get_bool("SavePlaylist"))
+ 		save_playlist (plist_file, NULL, 1);
+diff --git a/trunk/main.c b/trunk/main.c
+index 51d0f3d..9c94a5c 100644
+--- a/trunk/main.c
++++ b/trunk/main.c
+@@ -136,7 +136,7 @@ static int ping_server (int sock)
+ /* Check if a directory ./.moc exists and create if needed. */
+ static void check_moc_dir ()
+ {
+-	char *dir_name = create_file_name ("");
++	char * const dir_name = create_file_name ("");
+ 	struct stat file_stat;
+ 
+ 	/* strip trailing slash */
+@@ -632,14 +632,11 @@ static void read_mocp_poptrc (poptContext ctx, const char *env_poptrc)
+ /* Check that the ~/.popt file is secure. */
+ static void check_popt_secure ()
+ {
+-	int len;
+ 	const char *home, dot_popt[] = ".popt";
+-	char *home_popt;
++	char *home_popt = NULL;
+ 
+ 	home = get_home ();
+-	len = strlen (home) + strlen (dot_popt) + 2;
+-	home_popt = xcalloc (len, sizeof (char));
+-	snprintf (home_popt, len, "%s/%s", home, dot_popt);
++	asprintf (& home_popt, "%s/%s", home, dot_popt);
+ 	if (!is_secure (home_popt))
+ 		fatal ("POPT config file is not secure: %s", home_popt);
+ 	free (home_popt);
+@@ -857,8 +854,7 @@ static char *render_popt_command_line ()
+ 	lists_strs_append (cmdline, mocp_argv[0]);
+ 
+ 	while (1) {
+-		size_t len;
+-		char *str;
++		char *str = NULL;
+ 		const char *arg;
+ 		struct poptOption *opt;
+ 
+@@ -880,26 +876,16 @@ static char *render_popt_command_line ()
+ 		arg = poptGetOptArg (ctx);
+ 
+ 		if (opt->longName) {
+-			len = strlen (opt->longName) + 3;
+-			if (arg)
+-				len += strlen (arg) + 3;
+-			str = xmalloc (len);
+-
+ 			if (arg)
+-				snprintf (str, len, "--%s='%s'", opt->longName, arg);
++				asprintf (& str, "--%s='%s'", opt->longName, arg);
+ 			else
+-				snprintf (str, len, "--%s", opt->longName);
++				asprintf (& str, "--%s", opt->longName);
+ 		}
+ 		else {
+-			len = 3;
+-			if (arg)
+-				len += strlen (arg) + 3;
+-			str = xmalloc (len);
+-
+ 			if (arg)
+-				snprintf (str, len, "-%c '%s'", opt->shortName, arg);
++				asprintf (& str, "-%c '%s'", opt->shortName, arg);
+ 			else
+-				snprintf (str, len, "-%c", opt->shortName);
++				asprintf (& str, "-%c", opt->shortName);
+ 		}
+ 
+ 		lists_strs_push (cmdline, str);
+diff --git a/trunk/protocol.c b/trunk/protocol.c
+index e39a0a8..ca077e8 100644
+--- a/trunk/protocol.c
++++ b/trunk/protocol.c
+@@ -62,7 +62,7 @@ struct packet_buf
+ /* Create a socket name, return NULL if the name could not be created. */
+ char *socket_name ()
+ {
+-	char *socket_name = create_file_name (SOCKET_NAME);
++	char * const socket_name = create_file_name (SOCKET_NAME);
+ 
+ 	if (strlen(socket_name) > UNIX_PATH_MAX)
+ 		fatal ("Can't create socket name!");
+diff --git a/trunk/server.c b/trunk/server.c
+index 568b9a2..1817926 100644
+--- a/trunk/server.c
++++ b/trunk/server.c
+@@ -94,7 +94,7 @@ extern char **environ;
+ 
+ static void write_pid_file ()
+ {
+-	char *fname = create_file_name (PID_FILE);
++	char * const fname = create_file_name (PID_FILE);
+ 	FILE *file;
+ 
+ 	if ((file = fopen(fname, "w")) == NULL)
+@@ -108,7 +108,7 @@ static pid_t check_pid_file ()
+ {
+ 	FILE *file;
+ 	pid_t pid;
+-	char *fname = create_file_name (PID_FILE);
++	char * const fname = create_file_name (PID_FILE);
+ 
+ 	/* Read the pid file */
+ 	if ((file = fopen(fname, "r")) == NULL)
+diff --git a/trunk/softmixer.c b/trunk/softmixer.c
+index 1acb9d6..8a00eba 100644
+--- a/trunk/softmixer.c
++++ b/trunk/softmixer.c
+@@ -124,7 +124,7 @@ static void mix_mono_float(float *buf, int channels, size_t samples);
+ 
+ static void softmixer_read_config()
+ {
+-  char *cfname = create_file_name(SOFTMIXER_SAVE_FILE);
++  char * const cfname = create_file_name(SOFTMIXER_SAVE_FILE);
+ 
+   FILE *cf = fopen(cfname, "r");
+ 
+@@ -234,7 +234,7 @@ static void softmixer_read_config()
+ 
+ static void softmixer_write_config()
+ {
+-  char *cfname = create_file_name(SOFTMIXER_SAVE_FILE);
++  char * const cfname = create_file_name(SOFTMIXER_SAVE_FILE);
+ 
+   FILE *cf = fopen(cfname, "w");
+ 
+-- 
+2.9.0
+
