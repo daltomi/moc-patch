@@ -1,0 +1,24 @@
+From bb919fdb4b822409564ed82954e3f70b846ce4d4 Mon Sep 17 00:00:00 2001
+From: "Daniel T. Borelli" <daltomi@aol.com>
+Date: Tue, 28 Jun 2016 13:05:21 -0300
+Subject: [PATCH 5/5] Fix memory leak
+
+---
+ trunk/server.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/trunk/server.c b/trunk/server.c
+index 9c0d70c..4e58e06 100644
+--- a/trunk/server.c
++++ b/trunk/server.c
+@@ -551,6 +551,7 @@ static void on_song_change ()
+ 	case 0:
+ 		args = lists_strs_save (arg_list);
+ 		execve (args[0], args, environ);
++		free (args);
+ 		exit (EXIT_FAILURE);
+ 	case -1:
+ 		log_errno ("Failed to fork()", errno);
+-- 
+2.9.0
+

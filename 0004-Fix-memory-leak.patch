@@ -1,7 +1,7 @@
 From 97024c32e40da1d693013e5f6b8165e55c5c824b Mon Sep 17 00:00:00 2001
 From: "Daniel T. Borelli" <daltomi@aol.com>
 Date: Tue, 28 Jun 2016 10:32:26 -0300
-Subject: [PATCH 4/4] Fix memory leak.
+Subject: [PATCH 4/5] Fix memory leak.
 
 * It's safe to release a NULL pointer.
 ---
