@@ -1,0 +1,81 @@
+From e88ee56277da7d339e8bc314c64c4d479f3b0a57 Mon Sep 17 00:00:00 2001
+From: "Daniel T. Borelli" <daltomi@aol.com>
+Date: Fri, 1 Jul 2016 21:31:55 -0300
+Subject: [PATCH] Fix signal (zombie) SIG_CHLD
+
+* Move to server.
+---
+ trunk/main.c   | 14 --------------
+ trunk/server.c | 17 +++++++++++++++++
+ 2 files changed, 17 insertions(+), 14 deletions(-)
+
+diff --git a/trunk/main.c b/trunk/main.c
+index 51d0f3d..b4a41f6 100644
+--- a/trunk/main.c
++++ b/trunk/main.c
+@@ -157,19 +157,6 @@ static void check_moc_dir ()
+ 	}
+ }
+ 
+-static void sig_chld (int sig LOGIT_ONLY)
+-{
+-	int saved_errno;
+-	pid_t rc;
+-
+-	log_signal (sig);
+-
+-	saved_errno = errno;
+-	do {
+-		rc = waitpid (-1, NULL, WNOHANG);
+-	} while (rc > 0);
+-	errno = saved_errno;
+-}
+ 
+ /* Run client and the server if needed. */
+ static void start_moc (const struct parameters *params, lists_t_strs *args)
+@@ -208,7 +195,6 @@ static void start_moc (const struct parameters *params, lists_t_strs *args)
+ 				fatal ("write() to notify pipe failed: %s", xstrerror (errno));
+ 			close (notify_pipe[0]);
+ 			close (notify_pipe[1]);
+-			signal (SIGCHLD, sig_chld);
+ 			server_loop ();
+ 			options_free ();
+ 			decoder_cleanup ();
+diff --git a/trunk/server.c b/trunk/server.c
+index 568b9a2..66447f0 100644
+--- a/trunk/server.c
++++ b/trunk/server.c
+@@ -317,6 +317,22 @@ static void log_pthread_stack_size ()
+ #endif
+ }
+ 
++static void sig_chld (int sig LOGIT_ONLY)
++{
++	int saved_errno;
++	pid_t rc;
++
++	log_signal (sig);
++
++	saved_errno = errno;
++	do {
++		rc = waitpid (-1, NULL, WNOHANG);
++	} while (rc > 0);
++	errno = saved_errno;
++}
++
++
++
+ /* Initialize the server - return fd of the listening socket or -1 on error */
+ void server_init (int debugging, int foreground)
+ {
+@@ -387,6 +403,7 @@ void server_init (int debugging, int foreground)
+ 	thread_signal (SIGHUP, SIG_IGN);
+ 	thread_signal (SIGQUIT, sig_exit);
+ 	thread_signal (SIGPIPE, SIG_IGN);
++	thread_signal (SIGCHLD, sig_chld);
+ 
+ 	write_pid_file ();
+ 
+-- 
+2.9.0
+
