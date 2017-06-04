@@ -1,0 +1,120 @@
+From d63e0b0a6901bd6aeef84fdb359da156eb558f76 Mon Sep 17 00:00:00 2001
+From: "Daniel T. Borelli" <daltomi@openmailbox.org>
+Date: Sat, 3 Jun 2017 19:39:42 -0300
+Subject: [PATCH 10/18] fix_exp wcstombs memory_leak remove_extra_evaluation
+
+---
+ trunk/equalizer.c          | 2 ++
+ trunk/files.c              | 6 +++---
+ trunk/interface_elements.c | 4 ++--
+ trunk/jack.c               | 2 +-
+ trunk/server.c             | 6 +++++-
+ 5 files changed, 13 insertions(+), 7 deletions(-)
+
+diff --git a/trunk/equalizer.c b/trunk/equalizer.c
+index a5c8149..f8ada91 100644
+--- a/trunk/equalizer.c
++++ b/trunk/equalizer.c
+@@ -516,6 +516,8 @@ void equalizer_shutdown()
+ 
+   clear_eq_set(&equ_list);
+ 
++  free (eqsetdir);
++
+   logit ("Equalizer stopped");
+ }
+ 
+diff --git a/trunk/files.c b/trunk/files.c
+index 4d2b24d..c743166 100644
+--- a/trunk/files.c
++++ b/trunk/files.c
+@@ -574,13 +574,13 @@ char *read_line (FILE *file)
+ static char *add_dir_file (const char *base, const char *name)
+ {
+ 	char *path;
+-	int base_is_root;
+ 
+-	base_is_root = !strcmp (base, "/") ? 1 : 0;
++	char const * const base_root = !strcmp (base, "/") ? "" : base;
++
+ 	path = (char *)xmalloc (sizeof(char) *
+ 			(strlen(base) + strlen(name) + 2));
+ 
+-	sprintf (path, "%s/%s", base_is_root ? "" : base, name);
++	sprintf (path, "%s/%s", base_root, name);
+ 
+ 	return path;
+ }
+diff --git a/trunk/interface_elements.c b/trunk/interface_elements.c
+index 0e83af9..345d85f 100644
+--- a/trunk/interface_elements.c
++++ b/trunk/interface_elements.c
+@@ -367,7 +367,7 @@ static void entry_draw (const struct entry *e, WINDOW *w, const int posx,
+ 			sizeof(wchar_t) * (len + 1));
+ 	if (len > e->width)
+ 		text_ucs[e->width] = L'\0';
+-	len = wcstombs (NULL, text_ucs, -1) + 1;
++	len = wcstombs (NULL, text_ucs, 0) + 1;
+ 	assert (len >= 1);
+ 
+ 	text = (char *)xmalloc (len);
+@@ -642,7 +642,7 @@ static char *entry_get_text (const struct entry *e)
+ 
+ 	assert (e != NULL);
+ 
+-	len = wcstombs (NULL, e->text_ucs, -1) + 1;
++	len = wcstombs (NULL, e->text_ucs, 0) + 1;
+ 	assert (len >= 1);
+ 	text = (char *) xmalloc (sizeof (char) * len);
+ 	wcstombs (text, e->text_ucs, len);
+diff --git a/trunk/jack.c b/trunk/jack.c
+index 645ee98..434e248 100644
+--- a/trunk/jack.c
++++ b/trunk/jack.c
+@@ -304,7 +304,7 @@ static int moc_jack_read_mixer ()
+ static void moc_jack_set_mixer (int vol)
+ {
+ 	volume_integer = vol;
+-	volume = (jack_default_audio_sample_t)((exp((double)vol / 100.0) - 1)
++	volume = (jack_default_audio_sample_t)(expm1((double)vol / 100.0)
+ 			/ (M_E - 1));
+ }
+ 
+diff --git a/trunk/server.c b/trunk/server.c
+index 55280c1..628cab1 100644
+--- a/trunk/server.c
++++ b/trunk/server.c
+@@ -555,6 +555,7 @@ static void on_song_change ()
+ 	case 0:
+ 		args = lists_strs_save (arg_list);
+ 		execve (args[0], args, environ);
++		free (args);
+ 		exit (EXIT_FAILURE);
+ 	case -1:
+ 		log_errno ("Failed to fork()", errno);
+@@ -880,6 +881,7 @@ static int get_set_option (struct client *cli)
+ 		return 0;
+ 	if (!valid_sync_option (name)) {
+ 		logit ("Client requested setting invalid option '%s'", name);
++		free (name);
+ 		return 0;
+ 	}
+ 	if (!get_int (cli->socket, &val)) {
+@@ -1140,11 +1142,13 @@ static int plist_sync_cmd (struct client *cli, const int cmd)
+ 		free (file);
+ 	}
+ 	else if (cmd == CMD_CLI_PLIST_MOVE) {
+-		struct move_ev_data m;
++		struct move_ev_data m = {.from=NULL,.to=NULL};
+ 
+ 		if (!(m.from = get_str(cli->socket))
+ 				|| !(m.to = get_str(cli->socket))) {
+ 			logit ("Error while receiving file");
++			free (m.from);
++			free (m.to);
+ 			return 0;
+ 		}
+ 
+-- 
+2.13.0
+

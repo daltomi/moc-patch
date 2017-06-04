@@ -1,24 +1,24 @@
-From bb919fdb4b822409564ed82954e3f70b846ce4d4 Mon Sep 17 00:00:00 2001
+From 029fbdc748f14d20b440a43d3bdc459499293002 Mon Sep 17 00:00:00 2001
 From: "Daniel T. Borelli" <daltomi@aol.com>
-Date: Tue, 28 Jun 2016 13:05:21 -0300
-Subject: [PATCH 5/5] Fix memory leak
+Date: Tue, 28 Jun 2016 01:57:46 -0300
+Subject: [PATCH 05/18] Fix memory leak
 
 ---
  trunk/server.c | 1 +
  1 file changed, 1 insertion(+)
 
 diff --git a/trunk/server.c b/trunk/server.c
-index 9c0d70c..4e58e06 100644
+index 568b9a2..bb44aef 100644
 --- a/trunk/server.c
 +++ b/trunk/server.c
-@@ -551,6 +551,7 @@ static void on_song_change ()
- 	case 0:
- 		args = lists_strs_save (arg_list);
- 		execve (args[0], args, environ);
-+		free (args);
- 		exit (EXIT_FAILURE);
- 	case -1:
- 		log_errno ("Failed to fork()", errno);
+@@ -875,6 +875,7 @@ static int get_set_option (struct client *cli)
+ 		return 0;
+ 	if (!valid_sync_option (name)) {
+ 		logit ("Client requested setting invalid option '%s'", name);
++		free (name);
+ 		return 0;
+ 	}
+ 	if (!get_int (cli->socket, &val)) {
 -- 
-2.9.0
+2.13.0
 

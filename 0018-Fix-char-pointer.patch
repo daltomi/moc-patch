@@ -1,0 +1,25 @@
+From f2475f630669e2e66b791485a4393ad75c5cc2ca Mon Sep 17 00:00:00 2001
+From: "Daniel T. Borelli" <daltomi@openmailbox.org>
+Date: Sun, 4 Jun 2017 12:02:59 -0300
+Subject: [PATCH 18/18] Fix: char pointer.
+
+---
+ trunk/player.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/trunk/player.c b/trunk/player.c
+index b19636d..fdcd467 100644
+--- a/trunk/player.c
++++ b/trunk/player.c
+@@ -833,7 +833,7 @@ static void fill_cb (struct io_stream *unused1 ATTR_UNUSED, size_t fill,
+ 		size_t unused2 ATTR_UNUSED, void *unused3 ATTR_UNUSED)
+ {
+ 	if (prebuffering) {
+-		char msg = NULL;
++		char * msg = NULL;
+ 
+ 		asprintf (& msg, "Prebuffering %zu/%d KB", fill / 1024U,
+ 		              options_get_int("Prebuffering"));
+-- 
+2.13.0
+

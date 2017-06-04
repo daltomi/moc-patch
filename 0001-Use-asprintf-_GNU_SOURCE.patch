@@ -1,7 +1,7 @@
 From 114b1eaef88db079e4733d7d13dc0c1c4c0eadac Mon Sep 17 00:00:00 2001
 From: "Daniel T. Borelli" <daltomi@aol.com>
 Date: Sun, 26 Jun 2016 19:35:54 -0300
-Subject: [PATCH 1/2] Use asprintf (_GNU_SOURCE)
+Subject: [PATCH 01/18] Use asprintf (_GNU_SOURCE)
 
 * Replace xmalloc + sprintf
 ---
@@ -98,5 +98,5 @@ index 07ee73b..7b55f43 100644
  	f = fopen (fname, "w");
  	if (!f) {
 -- 
-2.9.0
+2.13.0
 
