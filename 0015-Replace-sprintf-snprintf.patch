@@ -1,0 +1,40 @@
+From bea8fdcce29df0d1bbcffa822ef969c4cdf29f8b Mon Sep 17 00:00:00 2001
+From: "Daniel T. Borelli" <daltomi@openmailbox.org>
+Date: Sun, 4 Jun 2017 11:16:41 -0300
+Subject: [PATCH 15/19] Replace sprintf -> snprintf
+
+---
+ trunk/playlist_file.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/trunk/playlist_file.c b/trunk/playlist_file.c
+index bc4b128..2e0e4cc 100644
+--- a/trunk/playlist_file.c
++++ b/trunk/playlist_file.c
+@@ -321,19 +321,19 @@ static int plist_load_pls (struct plist *plist, const char *fname,
+ 	for (i = 1; i <= nitems; i++) {
+ 		int time, last_added;
+ 		char *pls_file, *pls_title, *pls_length;
+-		char key[16], path[2 * PATH_MAX];
++		char key[26], path[2 * PATH_MAX];
+ 
+-		sprintf (key, "File%ld", i);
++		snprintf (key, sizeof(key), "File%ld", i);
+ 		pls_file = read_ini_value (file, "playlist", key);
+ 		if (!pls_file) {
+ 			error ("Broken PLS file");
+ 			goto err;
+ 		}
+ 
+-		sprintf (key, "Title%ld", i);
++		snprintf (key, sizeof(key), "Title%ld", i);
+ 		pls_title = read_ini_value (file, "playlist", key);
+ 
+-		sprintf (key, "Length%ld", i);
++		snprintf (key, sizeof(key), "Length%ld", i);
+ 		pls_length = read_ini_value (file, "playlist", key);
+ 
+ 		if (pls_length) {
+-- 
+2.13.1
+

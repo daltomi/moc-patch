@@ -1,0 +1,144 @@
+From 3afe63a82e1be147e86a342eeea3d8cbce2a7265 Mon Sep 17 00:00:00 2001
+From: "Daniel T. Borelli" <daltomi@openmailbox.org>
+Date: Sun, 4 Jun 2017 10:47:50 -0300
+Subject: [PATCH 11/19] Replace sprintf -> asprintf
+
+---
+ trunk/equalizer.c          | 6 ++++--
+ trunk/interface.c          | 6 ++++--
+ trunk/interface_elements.c | 6 ++++--
+ trunk/menu.c               | 7 +++++--
+ trunk/player.c             | 5 +++--
+ 5 files changed, 20 insertions(+), 10 deletions(-)
+
+diff --git a/trunk/equalizer.c b/trunk/equalizer.c
+index 7fe87ca..5578ad5 100644
+--- a/trunk/equalizer.c
++++ b/trunk/equalizer.c
+@@ -522,7 +522,7 @@ void equalizer_shutdown()
+ void equalizer_refresh()
+ {
+   t_eq_setup *eqs = NULL;
+-  char buf[1024];
++  char * buf = NULL;
+ 
+   char *current_set_name = NULL;
+ 
+@@ -556,10 +556,12 @@ void equalizer_refresh()
+ 
+   while(de)
+   {
+-    sprintf(buf, "eqsets/%s", de->d_name);
++    asprintf(& buf, "eqsets/%s", de->d_name);
+ 
+     char * const filename = create_file_name(buf);
+ 
++	free (buf);
++
+     stat(filename, &st);
+ 
+     if( S_ISREG(st.st_mode) )
+diff --git a/trunk/interface.c b/trunk/interface.c
+index 96a14b6..0c1249e 100644
+--- a/trunk/interface.c
++++ b/trunk/interface.c
+@@ -3115,11 +3115,11 @@ static void exec_custom_command (const char *option)
+ 
+ static void go_to_fast_dir (const int num)
+ {
+-	char option_name[20];
++	char * option = NULL;
+ 
+ 	assert (RANGE(1, num, 10));
+ 
+-	sprintf (option_name, "FastDir%d", num);
++	asprintf (& option_name, "FastDir%d", num);
+ 
+ 	if (options_get_str(option_name)) {
+ 		char dir[PATH_MAX] = "/";
+@@ -3129,6 +3129,8 @@ static void go_to_fast_dir (const int num)
+ 	}
+ 	else
+ 		error ("%s is not defined", option_name);
++
++	free (option_name);
+ }
+ 
+ static void toggle_playlist_full_paths (void)
+diff --git a/trunk/interface_elements.c b/trunk/interface_elements.c
+index 1d253ad..26d9f56 100644
+--- a/trunk/interface_elements.c
++++ b/trunk/interface_elements.c
+@@ -4324,14 +4324,16 @@ void iface_handle_lyrics_key (const struct iface_key *k)
+ void iface_toggle_layout ()
+ {
+ 	static int curr_layout = 1;
+-	char layout_option[10];
++	char * layout_option = NULL;
+ 	lists_t_strs *layout_fmt;
+ 
+ 	if (++curr_layout > 3)
+ 		curr_layout = 1;
+ 
+-	sprintf (layout_option, "Layout%d", curr_layout);
++	asprintf (& layout_option, "Layout%d", curr_layout);
+ 	layout_fmt = options_get_list (layout_option);
++	free (layout_option);
++
+ 	if (lists_strs_empty (layout_fmt)) {
+ 		curr_layout = 1;
+ 		layout_fmt = options_get_list ("Layout1");
+diff --git a/trunk/menu.c b/trunk/menu.c
+index f85c365..19a9d45 100644
+--- a/trunk/menu.c
++++ b/trunk/menu.c
+@@ -33,7 +33,7 @@ static void draw_item (const struct menu *menu, const struct menu_item *mi,
+ 	int title_width, queue_pos_len = 0;
+ 	int ix, x;
+ 	int y ATTR_UNUSED;		/* OpenBSD flags this as unused. */
+-	char buf[32];
++	char * buf = NULL;
+ 
+ 	assert (menu != NULL);
+ 	assert (mi != NULL);
+@@ -69,7 +69,7 @@ static void draw_item (const struct menu *menu, const struct menu_item *mi,
+ 
+ 	/* Compute the length of the queue position if nonzero */
+ 	if (mi->queue_pos) {
+-		sprintf (buf, "%d", mi->queue_pos);
++		asprintf (& buf, "%d", mi->queue_pos);
+ 		queue_pos_len = strlen(buf) + 2;
+ 		title_space -= queue_pos_len;
+ 	}
+@@ -123,6 +123,9 @@ static void draw_item (const struct menu *menu, const struct menu_item *mi,
+ 		xwprintw (menu->win, "[%5s]", mi->time);
+ 	else if (menu->show_format && mi->format[0])
+ 		xwprintw (menu->win, "[%3s]", mi->format);
++
++
++	free (buf);
+ }
+ 
+ void menu_draw (const struct menu *menu, const int active)
+diff --git a/trunk/player.c b/trunk/player.c
+index 7074493..b19636d 100644
+--- a/trunk/player.c
++++ b/trunk/player.c
+@@ -833,11 +833,12 @@ static void fill_cb (struct io_stream *unused1 ATTR_UNUSED, size_t fill,
+ 		size_t unused2 ATTR_UNUSED, void *unused3 ATTR_UNUSED)
+ {
+ 	if (prebuffering) {
+-		char msg[32];
++		char msg = NULL;
+ 
+-		sprintf (msg, "Prebuffering %zu/%d KB", fill / 1024U,
++		asprintf (& msg, "Prebuffering %zu/%d KB", fill / 1024U,
+ 		              options_get_int("Prebuffering"));
+ 		status_msg (msg);
++		free (msg);
+ 	}
+ }
+ 
+-- 
+2.13.1
+

@@ -1,0 +1,39 @@
+From 42c3a272e0350c944edd7ba370c87deab09b21dc Mon Sep 17 00:00:00 2001
+From: "Daniel T. Borelli" <daltomi@openmailbox.org>
+Date: Sun, 4 Jun 2017 11:58:40 -0300
+Subject: [PATCH 16/19] Fix: Ignored qualifiers
+
+---
+ trunk/common.c | 2 +-
+ trunk/common.h | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/trunk/common.c b/trunk/common.c
+index ca5cdc3..bff2ba7 100644
+--- a/trunk/common.c
++++ b/trunk/common.c
+@@ -342,7 +342,7 @@ bool is_valid_symbol (const char *candidate)
+ }
+ 
+ /* Return path to a file in MOC config directory. NOT THREAD SAFE */
+-char * const create_file_name (const char *file)
++char * create_file_name (const char *file)
+ {
+ 	int rc;
+ 	static char * fname = NULL;
+diff --git a/trunk/common.h b/trunk/common.h
+index 3f974d2..8eecaae 100644
+--- a/trunk/common.h
++++ b/trunk/common.h
+@@ -142,7 +142,7 @@ char *format_msg (const char *format, ...);
+ char *format_msg_va (const char *format, va_list va);
+ bool is_valid_symbol (const char *candidate);
+ int get_realtime (struct timespec *ts);
+-char * const create_file_name (const char *file);
++char * create_file_name (const char *file);
+ void sec_to_min (char *buff, const int seconds);
+ const char *get_home ();
+ void common_cleanup ();
+-- 
+2.13.1
+
